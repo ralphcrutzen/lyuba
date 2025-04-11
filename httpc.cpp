@@ -19,6 +19,15 @@
 
 #define LOCK_WAIT_TICKS 10000
 
+#define WDT_TIMEOUT 60000
+#define CONFIG_FREERTOS_NUMBER_OF_CORES 1
+
+static esp_task_wdt_config_t twdt_config = {
+    .timeout_ms = WDT_TIMEOUT,
+    .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
+    .trigger_panic = false,
+};
+
 static TaskHandle_t httpc_task_handle;
 
 static bool inited = false;
@@ -40,7 +49,9 @@ void httpc_loop_internal(void);
 httpc_err_t httpc_init_internal(void);
 
 static void httpc_task_function(void * pvParameter) {
-    esp_task_wdt_init(60, false);
+    esp_task_wdt_deinit();
+    esp_task_wdt_init(&twdt_config);
+    esp_task_wdt_add(NULL);
     httpc_init_internal();
     while(1) {
         esp_task_wdt_reset();
